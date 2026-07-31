@@ -1,19 +1,17 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from api.routes import discover
+from api.routes import discover, auth
 
-app = FastAPI(title="American History Helper")
+app = FastAPI(title="American History Investigative Helper Engine")
 
 app.add_middleware(
-    CORSMiddleware, 
-    allow_origins=["http://localhost:3000, http://localhost:5173"], 
+    CORSMiddleware,
+    allow_origins=["*"],             
     allow_credentials=True,
-    allow_methods=["*"], 
-    allow_headers=["*"]
+    allow_methods=["*"],            
+    allow_headers=["*"],
 )
 
-app.include_router(discover.router)
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("api.main:app", host="0.0.0.0", port=8000, reload=True)
+app.include_router(discover.router)
+app.include_router(auth.router)

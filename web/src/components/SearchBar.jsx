@@ -5,18 +5,8 @@ export default function SearchBar({ onSearch }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log("Button Clicked! Input text field value is:", input);
-    
-    if (!input.trim()) {
-      console.log("Search skipped: input string field is completely empty.");
-      return;
-    }
-
-    if (typeof onSearch === 'function') {
-      console.log("Calling parent onSearch execution loop handler...");
+    if (input.trim()) {
       onSearch(input.trim());
-    } else {
-      console.error("Critical: 'onSearch' property was not passed down correctly from App.jsx!");
     }
   };
 
@@ -54,3 +44,4 @@ export default function SearchBar({ onSearch }) {
     </form>
   );
 }
+
