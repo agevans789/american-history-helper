@@ -3,31 +3,25 @@ from sqlalchemy import text
 from api.database import async_session, Base, engine
 
 async def seed_graph_database():
-    print("Initializing historical discovery graph database pipelines...")
+    print("Initializing local SQLite history discovery database...")
     
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
         
     async with async_session() as session:
-        await session.execute(text("TRUNCATE TABLE relationships, historical_entries RESTART IDENTITY CASCADE;"))
-        
+        await session.execute(text("DELETE FROM relationships;"))
+        await session.execute(text("DELETE FROM historical_entries;"))
+  
         entries_sql = text("""
-            INSERT INTO historical_entries (title, content, historical_era) VALUES
-            ('George Washington', 'First President of the United States and Commander of the Continental Army during the American Revolutionary War.', 'Revolutionary War Era'),
-            ('The Stamp Act of 1765', 'A direct tax imposed by British Parliament on printed materials in the American colonies, sparking early unified colonial resistance.', 'Revolutionary War Era'),
-            ('The Boston Tea Party', 'A political protest by the Sons of Liberty in Boston where colonists frustrated at British taxation without representation dumped tea into the harbor.', 'Revolutionary War Era'),
-            ('The Declaration of Independence', 'The formal statement adopted by the Second Continental Congress declaring the thirteen colonies free from Great Britain.', 'Revolutionary War Era'),
-            ('The Battles of Lexington and Concord', 'The opening military engagements of the Revolutionary War, marking the outbreak of armed structural conflict.', 'Revolutionary War Era');
+            INSERT INTO historical_entries (entry_id, title, content, historical_era) VALUES
+            (1, 'George Washington', 'First President of the United States and Commander of the Continental Army during the American Revolutionary War.', 'Revolutionary War Era'),
+            (2, 'The Stamp Act of 1765', 'A direct tax imposed by British Parliament on printed materials in the American colonies, sparking early unified colonial resistance.', 'Revolutionary War Era'),
+            (3, 'The Boston Tea Party', 'A political protest by the Sons of Liberty in Boston where colonists frustrated at British taxation without representation dumped tea into the harbor.', 'Revolutionary War Era'),
+            (4, 'The Declaration of Independence', 'The formal statement adopted by the Second Continental Congress declaring the thirteen colonies free from Great Britain.', 'Revolutionary War Era'),
+            (5, 'The Battles of Lexington and Concord', 'The opening military engagements of the Revolutionary War, marking the outbreak of armed structural conflict.', 'Revolutionary War Era');
         """)
         await session.execute(entries_sql)
-
-        print("Compiles full-text tracking vector indexes...")
-        update_vectors_sql = text("""
-            UPDATE historical_entries 
-            SET search_vector = to_tsvector('english', coalesce(title, '') || ' ' || coalesce(content, ''));
-        """)
-        await session.execute(update_vectors_sql)
- 
+        
         relationships_sql = text("""
             INSERT INTO relationships (source_entry_id, target_entry_id, weight, relationship_type) VALUES
             (2, 3, 0.90, 'Causation'),     -- Stamp Act caused the Boston Tea Party
@@ -38,7 +32,7 @@ async def seed_graph_database():
         await session.execute(relationships_sql)
         
         await session.commit()
-        print("Success! 5 historical nodes and discovery graph paths have been fully seeded.")
+        print("Success! 5 historical nodes and discovery graph paths have been fully seeded into SQLite.")
 
 if __name__ == "__main__":
     asyncio.run(seed_graph_database())
