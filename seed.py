@@ -20,6 +20,13 @@ async def seed_graph_database():
             ('The Battles of Lexington and Concord', 'The opening military engagements of the Revolutionary War, marking the outbreak of armed structural conflict.', 'Revolutionary War Era');
         """)
         await session.execute(entries_sql)
+
+        print("Compiles full-text tracking vector indexes...")
+        update_vectors_sql = text("""
+            UPDATE historical_entries 
+            SET search_vector = to_tsvector('english', coalesce(title, '') || ' ' || coalesce(content, ''));
+        """)
+        await session.execute(update_vectors_sql)
  
         relationships_sql = text("""
             INSERT INTO relationships (source_entry_id, target_entry_id, weight, relationship_type) VALUES
