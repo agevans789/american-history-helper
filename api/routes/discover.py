@@ -10,6 +10,7 @@ from api.schemas.discovery import SearchResultDTO, RecommendationDTO
 
 router = APIRouter(prefix="/api", tags=["Discovery"])
 
+
 class LocDocumentDTO(BaseModel):
     title: str
     url: str
@@ -40,36 +41,38 @@ async def discover_history(
     matching_sources, source_ids = [], []
     try:
         search_sql = text("""
-            SELECT entry_id, title, content, historical_era, 
-                   ts_rank(search_vector, websearch_to_tsquery('english', :query)) AS rank
-        FROM historical_entries
-        WHERE search_vector @@ websearch_to_tsquery('english', :query)
-        ORDER BY rank DESC LIMIT 5;
-    """)
-        search_result = await db.execute(search_sql, {"query": q})
+            SELECT entry_id, title, content, historical_era 
+            FROM historical_entries
+            WHERE title LIKE :like_query OR content LIKE :like_query
+            LIMIT 5;
+        """)
+        
+        search_result = await db.execute(search_sql, {"like_query": f"%{q}%"})
         for row in search_result:
             matching_sources.append(
                 SearchResultDTO(
-                    entry_id=row.entry_id, title=row.title, content=row.content,
-                    historical_era=row.historical_era, rank=float(row.rank)
+                    entry_id=row.entry_id, 
+                    title=row.title, 
+                    content=row.content,
+                    historical_era=row.historical_era, 
+                    rank=1.0 
                 )
             )
             source_ids.append(row.entry_id)
     except Exception as db_err:
-        print(f"Database text search safely bypassed (tables empty or unseeded yet): {db_err}")
+        print(f"Local SQLite extraction skipped (seeding required): {db_err}")
 
     recommended_topics = []
     if source_ids:
         try:
             discovery_sql = text("""
-                SELECT DISTINCT ON (he.entry_id) 
-                    he.entry_id, he.title, he.historical_era, r.relationship_type, r.weight
+                SELECT DISTINCT he.entry_id, he.title, he.historical_era, r.relationship_type, r.weight
                 FROM relationships r
                 JOIN historical_entries he ON r.target_entry_id = he.entry_id
-                WHERE r.source_entry_id = ANY(:source_ids) AND r.target_entry_id != ANY(:source_ids)
-                ORDER BY he.entry_id, r.weight DESC LIMIT 4;
+                WHERE r.source_entry_id IN :source_ids AND r.target_entry_id NOT IN :source_ids
+                LIMIT 4;
             """)
-            discovery_result = await db.execute(discovery_sql, {"source_ids": source_ids})
+            discovery_result = await db.execute(discovery_sql, {"source_ids": tuple(source_ids)})
             for row in discovery_result:
                 recommended_topics.append(
                     RecommendationDTO(
@@ -78,10 +81,10 @@ async def discover_history(
                     )
                 )
         except Exception as graph_err:
-            print(f"Graph recommendations skipped safely: {graph_err}")
+            print(f"Graph recommendations bypassed: {graph_err}")
 
     loc_primary_sources = []
-    loc_url = "https://www.loc.gov/search/"
+    loc_url = "https://loc.gov"
     params = {"q": q, "fo": "json", "c": 3}
     
     try:
@@ -91,41 +94,24 @@ async def discover_history(
                 loc_data = loc_response.json()
                 for item in loc_data.get("results", []):
                     raw_desc = item.get("description", "No archival description provided.")
-                    desc_text = str(raw_desc[0]) if isinstance(raw_desc, list) and len(raw_desc) > 0 else str(raw_desc)
+                    desc_text = str(raw_desc) if isinstance(raw_desc, list) and len(raw_desc) > 0 else str(raw_desc)
                     
                     raw_date = item.get("date", "Unknown Date")
-                    date_text = str(raw_date[0]) if isinstance(raw_date, list) and len(raw_date) > 0 else str(raw_date)
+                    date_text = str(raw_date) if isinstance(raw_date, list) and len(raw_date) > 0 else str(raw_date)
 
                     title_raw = item.get("title", "Untitled Document Artifact")
-                    id_raw = item.get("id", "https://www.loc.gov")
+                    id_raw = item.get("id", "https://loc.gov")
 
                     loc_primary_sources.append(
                         LocDocumentDTO(
-                            title=str(title_raw[0]) if isinstance(title_raw, list) and len(title_raw) > 0 else str(title_raw),
+                            title=str(title_raw) if isinstance(title_raw, list) and len(title_raw) > 0 else str(title_raw),
                             url=str(id_raw) if str(id_raw).startswith("http") else f"https:{id_raw}",
                             item_date=date_text,
                             description=desc_text[:230] + "..." if len(desc_text) > 230 else desc_text
                         )
                     )
     except Exception as network_error:
-        print(f"LOC Network pipeline timed out or offline ({network_error}). Activating backup mocks...")
-        
-
-    if not loc_primary_sources:
-        loc_primary_sources = [
-            LocDocumentDTO(
-                title=f"The Papers of {q.title()}",
-                url="https://www.loc.gov",
-                item_date="Historical Archive Collection",
-                description=f"Official library manuscript indexes, historical documents, and source materials covering details for '{q}'."
-            ),
-            LocDocumentDTO(
-                title=f"Congressional Memorial Repository: {q.title()}",
-                url="https://www.loc.gov",
-                item_date="Archival Record",
-                description=f"Legislative entries and historic repository items tracking investigative trails of '{q}'."
-            )
-        ]
+        print(f"LOC API offline or slow ({network_error}). Returning local data state layers.")
 
     return ExpandedDiscoveryResponse(
         query=q,
@@ -133,3 +119,4 @@ async def discover_history(
         recommended_topics=recommended_topics,
         loc_primary_sources=loc_primary_sources
     )
+
