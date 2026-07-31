@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from api.routes import discover
 
-app = FastAPI("American History Helper")
+app = FastAPI(title="American History Helper")
 
 app.add_middleware(
     CORSMiddleware, 
