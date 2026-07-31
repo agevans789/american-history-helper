@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import MainLayout from './layouts/MainLayout';
 import SearchBar from './components/SearchBar';
+import SourceCard from './components/SourceCard';
+import RelatedCard from './components/RelatedCard';
 
 export default function App() {
   const [sources, setSources] = useState([]);
@@ -29,74 +31,47 @@ export default function App() {
       <main>
         <SearchBar onSearch={handleSearch} />
         
-        {loading && <p>Searching the historical database archives...</p>}
-
+        {loading && <p style={{ color: '#666', fontStyle: 'italic' }}>Searching the historical database archives...</p>}
+ 
         {!loading && sources.length > 0 && (
-          <section>
-            <h2 style={{ fontSize: '20px', borderBottom: '2px solid #0070f3', paddingBottom: '4px' }}>Local History Entries</h2>
+          <section style={{ marginBottom: '24px' }}>
+            <h2 style={{ fontSize: '18px', borderBottom: '2px solid #0070f3', paddingBottom: '4px', marginBottom: '14px' }}>Local History Entries</h2>
             {sources.map((item) => (
-              <article key={item.entry_id} style={{ padding: '16px', border: '1px solid #eaeaea', borderRadius: '8px', marginBottom: '16px', background: '#fff' }}>
-                <h3 style={{ margin: '0 0 8px 0', color: '#0070f3' }}>{item.title}</h3>
-                <span style={{ fontSize: '12px', background: '#eee', padding: '2px 6px', borderRadius: '4px' }}>{item.historical_era}</span>
-                <p style={{ color: '#444', lineHeight: '1.5' }}>{item.content}</p>
-              </article>
+              <SourceCard key={item.entry_id} item={item} isLoc={false} />
             ))}
           </section>
         )}
 
-    
         {!loading && locSources.length > 0 && (
-          <section style={{ marginTop: '30px' }}>
-            <h2 style={{ fontSize: '20px', borderBottom: '2px solid #e60000', paddingBottom: '4px' }}>📚 Library of Congress Primary Sources</h2>
+          <section>
+            <h2 style={{ fontSize: '18px', borderBottom: '2px solid #e60000', paddingBottom: '4px', marginBottom: '14px' }}>📚 Library of Congress Primary Sources</h2>
             {locSources.map((doc, idx) => (
-              <article key={idx} style={{ padding: '16px', border: '1px solid #eaeaea', borderRadius: '8px', marginBottom: '16px', background: '#fcfcfc' }}>
-                <h3 style={{ margin: '0 0 4px 0' }}>
-                  <a href={doc.url} target="_blank" rel="noopener noreferrer" style={{ color: '#e60000', textDecoration: 'none' }}>
-                    {doc.title}
-                  </a>
-                </h3>
-                <span style={{ fontSize: '11px', color: '#777' }}>Archival Date: {doc.item_date || 'Unknown'}</span>
-                <p style={{ color: '#555', fontSize: '14px', marginTop: '8px', lineHeight: '1.4' }}>{doc.description}</p>
-                <a href={doc.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '12px', color: '#0070f3' }}>
-                  View Original Document Artifact →
-                </a>
-              </article>
+              <SourceCard key={idx} item={doc} isLoc={true} />
             ))}
           </section>
         )}
 
         {!loading && sources.length === 0 && locSources.length === 0 && (
-          <p style={{ color: '#666' }}>Type a historical topic above to search the digital archives.</p>
+          <p style={{ color: '#666', background: '#f5f5f5', padding: '20px', borderRadius: '6px', textAlign: 'center' }}>
+            Type a historical event above to explore the discovery networks map.
+          </p>
         )}
       </main>
 
-    
       <aside style={{ borderLeft: '1px solid #eee', paddingLeft: '20px' }}>
-        <h2 style={{ fontSize: '20px', margin: '0 0 16px 0', color: '#333' }}>🧭 Related Topics Graph</h2>
+        <h2 style={{ fontSize: '18px', margin: '0 0 16px 0', color: '#333' }}>🧭 Related Topics Graph</h2>
         
-        {recommendations.length === 0 && <p style={{ color: '#999', fontSize: '14px' }}>No graph connections active. Connect to database to generate map paths.</p>}
+        {recommendations.length === 0 && (
+          <p style={{ color: '#999', fontSize: '13px', fontStyle: 'italic' }}>
+            No graph connections active. Connect and seed your local database to map discovery paths.
+          </p>
+        )}
         
         {recommendations.map((topic) => (
-          <div 
-            key={topic.entry_id} 
-            onClick={() => handleSearch(topic.title)} 
-            style={{ 
-              padding: '12px', 
-              background: '#f9f9f9', 
-              borderRadius: '6px', 
-              marginBottom: '12px', 
-              cursor: 'pointer',
-              border: '1px solid #eee'
-            }}
-          >
-            <h4 style={{ margin: '0 0 4px 0', color: '#111' }}>{topic.title}</h4>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#666' }}>
-              <span>Connection: <strong>{topic.relationship_type || 'General'}</strong></span>
-              <span>Weight: {topic.weight}</span>
-            </div>
-          </div>
+          <RelatedCard key={topic.entry_id} topic={topic} onClick={handleSearch} />
         ))}
       </aside>
     </MainLayout>
   );
 }
+
