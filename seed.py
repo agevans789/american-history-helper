@@ -2,25 +2,20 @@ import asyncio
 from sqlalchemy import text
 from api.database import async_session, Base, engine
 
-# --- MANDATORY MODEL IMPORT REGISTER ---
-# This forces Python to evaluate your data classes so SQLAlchemy knows they exist
-# before Base.metadata.create_all executes.
 try:
-    from api.routes import discover  # Indirectly evaluates your data schema layout classes
+    from api.routes import discover  
 except ImportError:
     pass
 
 async def seed_graph_database():
     print("Initializing local SQLite history discovery database...")
     
-    # 1. Physically compile and build the tables into history_graph.db
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
         
     async with async_session() as session:
         print("Clearing stale table rows safely...")
         try:
-            # SQLite does not support TRUNCATE, standard DELETE is correct here
             await session.execute(text("DELETE FROM relationships;"))
             await session.execute(text("DELETE FROM historical_entries;"))
             await session.commit()

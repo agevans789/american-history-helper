@@ -10,7 +10,6 @@ export default function App() {
   const [locSources, setLocSources] = useState([]); 
   const [loading, setLoading] = useState(false);
 
-  // THERE IS ONLY ONE CLEAN HANDLESEARCH FUNCTION HERE NOW
   const handleSearch = async (queryPhrase) => {
     setLoading(true);
     try {
