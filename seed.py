@@ -2,16 +2,26 @@ import asyncio
 from sqlalchemy import text
 from api.database import async_session, Base, engine
 
+try:
+    from api.routes import discover 
+except ImportError:
+    pass
+
 async def seed_graph_database():
     print("Initializing local SQLite history discovery database...")
-    
+
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
         
     async with async_session() as session:
-        await session.execute(text("DELETE FROM relationships;"))
-        await session.execute(text("DELETE FROM historical_entries;"))
-  
+        print("Clearing historical table data...")
+        try:
+            await session.execute(text("DELETE FROM relationships;"))
+            await session.execute(text("DELETE FROM historical_entries;"))
+        except Exception as e:
+            print(f"Bypassing safe truncate check: {e}")
+        
+        print("Injecting primary historical nodes...")
         entries_sql = text("""
             INSERT INTO historical_entries (entry_id, title, content, historical_era) VALUES
             (1, 'George Washington', 'First President of the United States and Commander of the Continental Army during the American Revolutionary War.', 'Revolutionary War Era'),
@@ -22,6 +32,7 @@ async def seed_graph_database():
         """)
         await session.execute(entries_sql)
         
+        print("Building structural discovery graph connections...")
         relationships_sql = text("""
             INSERT INTO relationships (source_entry_id, target_entry_id, weight, relationship_type) VALUES
             (2, 3, 0.90, 'Causation'),     -- Stamp Act caused the Boston Tea Party
@@ -32,7 +43,7 @@ async def seed_graph_database():
         await session.execute(relationships_sql)
         
         await session.commit()
-        print("Success! 5 historical nodes and discovery graph paths have been fully seeded into SQLite.")
+        print("🎉 Success! 5 historical nodes and discovery graph paths have been fully seeded into SQLite.")
 
 if __name__ == "__main__":
     asyncio.run(seed_graph_database())
