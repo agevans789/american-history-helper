@@ -13,18 +13,19 @@ class SearchResultDTO(BaseModel):
     historical_era: str
     rank: float
 
+class ArchiveDocumentDTO(BaseModel):
+    title: str
+    url: str
+    item_date: Optional[str] = "Unknown Date"
+    description: Optional[str] = "No archival summary available."
+
 class RecommendationDTO(BaseModel):
     entry_id: int
     title: str
     historical_era: str
     relationship_type: str
     weight: float
-
-class ArchiveDocumentDTO(BaseModel):
-    title: str
-    url: str
-    item_date: Optional[str] = "Unknown Date"
-    description: Optional[str] = "No archival summary available."
+    archive_sources: List[ArchiveDocumentDTO] = []
 
 class ExpandedDiscoveryResponse(BaseModel):
     query: str
@@ -72,24 +73,17 @@ def calculate_decade_themes(query: str, era_name: str) -> List[RecommendationDTO
         RecommendationDTO(entry_id=3102, title=f"{query.title()} Contemporary Sonic & Folk Traditions", historical_era=era_name, relationship_type="Music of the Era", weight=0.83)
     ]
 
-@router.get("/discover", response_model=ExpandedDiscoveryResponse)
-async def discover_history(
-    q: str = Query(..., description="The historical search phrase"),
-    user_id: Optional[int] = None
-):
-    clean_query = q.strip()
-    title_case_query = clean_query.title()
-    base_era = detect_historical_era(clean_query)
-    archive_primary_sources = []
-    encoded_search = quote_plus(clean_query)
+async def search_archive(query: str, limit: int = 10) -> List[ArchiveDocumentDTO]:
+    archive_results = []
+    encoded_query = quote_plus(query)
     archive_api_url = "https://archive.org/advancedsearch.php"
-    backup_search_url = f"https://archive.org/search.php?query={encoded_search}"
     query_params = {
-    "q": f"{clean_query} AND mediatype:texts",
-    "fl[]": ["identifier", "title", "date", "description"],
-    "rows": 10,
-    "output": "json"
+        "q": f"{query} AND mediatype:texts",
+        "fl[]": ["identifier", "title", "date", "description"],
+        "rows": limit,
+        "output": "json"
     }
+
     try:
         async with httpx.AsyncClient(timeout=6.0) as client:
             response = await client.get(archive_api_url, params=query_params)
@@ -97,10 +91,7 @@ async def discover_history(
                 data = response.json()
                 docs = data.get("response", {}).get("docs", [])
                 for idx, item in enumerate(docs, start=1):
-                    formatted_title = item.get(
-                        "title",
-                        f"Internet Archive Record {idx}"
-                )
+                    formatted_title = item.get("title", f"Internet Archive Record {idx}")
                     raw_date = item.get("date", "")
                     display_date = "Archival Print"
                     if len(raw_date) >= 10:
@@ -111,8 +102,8 @@ async def discover_history(
                     if target_path:
                         true_url = f"https://archive.org/details/{target_path}"
                     else:
-                        true_url = backup_search_url
-                    archive_primary_sources.append(
+                        true_url = f"https://archive.org/search.php?query={encoded_query}"
+                    archive_results.append(
                         ArchiveDocumentDTO(
                             title=formatted_title,
                             url=true_url,
@@ -122,16 +113,20 @@ async def discover_history(
                     )
     except Exception:
         pass
-    if not archive_primary_sources:
-        for idx in range(1, 11):
-            archive_primary_sources.append(
-                ArchiveDocumentDTO(
-                    title=f"Internet Archive Record: {title_case_query} Chronicle Record {idx}",
-                    url=backup_search_url,
-                    item_date="Archival Print",
-                    description=f"Authentic library text sheet capturing primary source documentation records related to '{title_case_query}'."
-                )
-            )
+    return archive_results
+
+@router.get("/discover", response_model=ExpandedDiscoveryResponse)
+async def discover_history(
+    q: str = Query(..., description="The historical search phrase"),
+    user_id: Optional[int] = None
+):
+    clean_query = q.strip()
+    title_case_query = clean_query.title()
+    base_era = detect_historical_era(clean_query)
+    
+
+    archive_primary_sources = await search_archive(clean_query)
+    
     matching_sources = [
         SearchResultDTO(
             entry_id=1001,
@@ -141,13 +136,23 @@ async def discover_history(
             rank=1.0
         )
     ]
+    
     recommended_topics = calculate_decade_themes(clean_query, base_era)
+
+
+    for topic in recommended_topics:
+        topic.archive_sources = await search_archive(
+            f"{topic.title} {base_era}",
+            limit=5  
+        )
+
     return ExpandedDiscoveryResponse(
         query=title_case_query,
         matching_sources=matching_sources,
         recommended_topics=recommended_topics,
         archive_primary_sources=archive_primary_sources
     )
+
 
 
 
