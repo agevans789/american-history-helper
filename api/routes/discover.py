@@ -189,4 +189,21 @@ async def discover_history(
                 )
             )
 
+    matching_sources = [
+        SearchResultDTO(
+            entry_id=1001,
+            title=f"Core Analytical Study: {title_case_query}",
+            content=f"An integrated review of the strategic choices, operational turning points, and long-term legacy footprints of {title_case_query} inside American historical networks.",
+            historical_era=base_era,
+            rank=1.0
+        )
+    ]
+
+    return ExpandedDiscoveryResponse(
+        query=title_case_query,
+        matching_sources=matching_sources,
+        recommended_topics=recommended_topics,
+        loc_primary_sources=loc_primary_sources
+    )
+
 
