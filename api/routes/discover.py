@@ -19,7 +19,7 @@ class RecommendationDTO(BaseModel):
     relationship_type: str
     weight: float
 
-class LocDocumentDTO(BaseModel):
+class ArchiveDocumentDTO(BaseModel):
     title: str
     url: str
     item_date: Optional[str] = "Unknown Date"
@@ -29,7 +29,7 @@ class ExpandedDiscoveryResponse(BaseModel):
     query: str
     matching_sources: List[SearchResultDTO]
     recommended_topics: List[RecommendationDTO]
-    loc_primary_sources: List[LocDocumentDTO]
+    archive_primary_sources: List[ArchiveDocumentDTO]
 
 def detect_historical_era(text_corpus: str) -> str:
     corpus = text_corpus.lower()
@@ -39,8 +39,6 @@ def detect_historical_era(text_corpus: str) -> str:
         return "The Great Depression Era"
     if any(w in corpus for w in ["twain", "gilded", "rockefeller", "188", "189"]):
         return "Gilded Age & Progressive Era"
-    if any(w in corpus for w in ["wright", "airplane", "aviation", "190", "191"]):
-        return "Progressive Era Aviation"
     return "American History Archive Chronology"
 
 def calculate_decade_themes(query: str, era_name: str) -> List[RecommendationDTO]:
@@ -64,7 +62,7 @@ def calculate_decade_themes(query: str, era_name: str) -> List[RecommendationDTO
             RecommendationDTO(entry_id=3009, title="Victorian Architecture & Gilded Opulence Style", historical_era=era_name, relationship_type="Style of the Era", weight=0.95),
             RecommendationDTO(entry_id=3010, title="Incandescent Lighting & Electric Power Grids", historical_era=era_name, relationship_type="Technology of the Time", weight=0.91),
             RecommendationDTO(entry_id=3011, title="Literary Realism & Regional American Dialects", historical_era=era_name, relationship_type="Literature of the Era", weight=0.88),
-            RecommendationDTO(entry_id=3012, title="Classical Orchestras, Early Marching Bands, & Parlor Music", historical_era: era_name, relationship_type="Music of the Era", weight=0.85)
+            RecommendationDTO(entry_id=3012, title="Classical Orchestras, Early Marching Bands, & Parlor Music", historical_era=era_name, relationship_type="Music of the Era", weight=0.85)
         ]
     return [
         RecommendationDTO(entry_id=3099, title=f"{query.title()} Material Culture & Style", historical_era=era_name, relationship_type="Style of the Era", weight=0.92),
@@ -82,37 +80,38 @@ async def discover_history(
     title_case_query = clean_query.title()
     base_era = detect_historical_era(clean_query)
     
-    loc_primary_sources = []
+    archive_primary_sources = []
     encoded_search = clean_query.replace(" ", "+")
-    loc_api_url = f"https://loc.gov{encoded_search}&format=json"
+    
+    archive_api_url = f"https://archive.org{encoded_search}+AND+mediatype:texts&fl[]=identifier,title,date,description&rows=10&output=json"
+    backup_search_url = f"https://archive.org{encoded_search}"
     
     try:
         async with httpx.AsyncClient(timeout=6.0, verify=False) as client:
-            response = await client.get(loc_api_url)
+            response = await client.get(archive_api_url)
             if response.status_code == 200:
                 data = response.json()
-                items = data.get("items", [])
+                docs = data.get("response", {}).get("docs", [])
                 
-                for idx, item in enumerate(items[:10], start=1):
-                    formatted_title = f"Chronicling America Record: {title_case_query} Chronicle Record {idx}"
+                for idx, item in enumerate(docs, start=1):
+                    formatted_title = f"Internet Archive Record: {title_case_query} Chronicle Record {idx}"
                     
                     raw_date = item.get("date", "")
                     display_date = "Archival Print"
-                    if len(raw_date) == 8:
-                        display_date = f"{raw_date[4:6]}/{raw_date[6:8]}/{raw_date[0:4]}"
+                    if len(raw_date) >= 10:
+                        display_date = raw_date[:10]
                     
-                    ocr_text = item.get("ocr_eng", "")
-                    clean_desc = ocr_text[:220] + "..." if ocr_text else "Authentic library text sheet capturing primary source documentation records."
+                    raw_desc = item.get("description", "")
+                    clean_desc = str(raw_desc)[:220] + "..." if raw_desc else "Authentic library text sheet capturing primary source documentation records."
                     
-                    # Real-time data target fix: Chronicling America item payload stores the deep links under the 'id' field, requiring an exact root schema.
-                    page_id = item.get("id", "").strip()
-                    if page_id:
-                        true_url = f"https://loc.gov{page_id}"
+                    target_path = item.get("identifier", "")
+                    if target_path:
+                        true_url = f"https://archive.org{target_path}"
                     else:
-                        true_url = f"https://loc.gov{encoded_search}"
+                        true_url = backup_search_url
                     
-                    loc_primary_sources.append(
-                        LocDocumentDTO(
+                    archive_primary_sources.append(
+                        ArchiveDocumentDTO(
                             title=formatted_title,
                             url=true_url,
                             item_date=display_date,
@@ -122,12 +121,12 @@ async def discover_history(
     except Exception:
         pass
 
-    if not loc_primary_sources:
+    if not archive_primary_sources:
         for idx in range(1, 11):
-            loc_primary_sources.append(
-                LocDocumentDTO(
-                    title=f"Chronicling America Record: {title_case_query} Chronicle Record {idx}",
-                    url=f"https://loc.gov{encoded_search}",
+            archive_primary_sources.append(
+                ArchiveDocumentDTO(
+                    title=f"Internet Archive Record: {title_case_query} Chronicle Record {idx}",
+                    url=backup_search_url,
                     item_date="Archival Print",
                     description=f"Authentic library text sheet capturing primary source documentation records related to '{title_case_query}'."
                 )
@@ -149,8 +148,11 @@ async def discover_history(
         query=title_case_query,
         matching_sources=matching_sources,
         recommended_topics=recommended_topics,
-        loc_primary_sources=loc_primary_sources
+        archive_primary_sources=archive_primary_sources
     )
+
+
+
 
 
 

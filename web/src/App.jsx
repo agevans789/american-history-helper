@@ -7,7 +7,7 @@ import RelatedCard from './components/RelatedCard';
 export default function App() {
   const [sources, setSources] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
-  const [locSources, setLocSources] = useState([]); 
+  const [archiveSources, setArchiveSources] = useState([]); 
   const [loading, setLoading] = useState(false);
   
   const [historyStack, setHistoryStack] = useState([]);
@@ -25,7 +25,7 @@ export default function App() {
       
       setSources(data.matching_sources || []);
       setRecommendations(data.recommended_topics || []);
-      setLocSources(data.loc_primary_sources || []); 
+      setArchiveSources(data.archive_primary_sources || []); 
       
       if (!isGoingBack && currentQuery) {
         setHistoryStack((prev) => [...prev, currentQuery]);
@@ -80,16 +80,17 @@ export default function App() {
           </section>
         )}
 
-        {!loading && locSources.length > 0 && (
+        {!loading && archiveSources.length > 0 && (
           <section style={{ marginTop: '20px' }}>
             <h2 style={{ fontSize: '18px', borderBottom: '2px solid #e60000', paddingBottom: '4px', marginBottom: '14px', color: '#e60000' }}>📚 Real-Time Historical Reference Sources (Top 10)</h2>
-            {locSources.map((doc, idx) => (
-              <SourceCard key={idx} item={doc} isLoc={true} />
+            {archiveSources.map((doc, idx) => (
+              <SourceCard key={idx} item={doc} isArchive={true} />
             ))}
           </section>
         )}
 
-        {!loading && sources.length === 0 && locSources.length === 0 && (
+
+        {!loading && sources.length === 0 && archiveSources.length === 0 && (
           <p style={{ color: '#666', background: '#f5f5f5', padding: '30px', borderRadius: '6px', textAlign: 'center', marginTop: '20px' }}>
             Type a historical event above to explore the discovery networks map.
           </p>
@@ -116,6 +117,10 @@ export default function App() {
     </MainLayout>
   );
 }
+
+
+
+
 
 
 
