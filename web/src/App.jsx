@@ -17,7 +17,11 @@ export default function App() {
     setLoading(true);
     
     try {
-      const targetUrl = 'http://127.0.0' + encodeURIComponent(queryPhrase);
+      const baseApiAddress = 'http://127.0.0.1:8000';
+      const endpointRoute = '/api/discover?q=';
+      const encodedQuery = encodeURIComponent(queryPhrase);
+      
+      const targetUrl = baseApiAddress + endpointRoute + encodedQuery;
       
       const response = await fetch(targetUrl);
       const data = await response.json();
@@ -25,7 +29,7 @@ export default function App() {
       setSources(data.matching_sources || []);
       setRecommendations(data.recommended_topics || []);
       setLocSources(data.loc_primary_sources || []); 
- 
+      
       if (!isGoingBack && currentQuery) {
         setHistoryStack((prev) => [...prev, currentQuery]);
       }
@@ -117,4 +121,5 @@ export default function App() {
     </MainLayout>
   );
 }
+
 
