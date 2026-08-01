@@ -31,3 +31,4 @@ Core Functionality
 -each record card links back to the original on Internet Archive
 -tracks keywords to match related topics in literature, music, etc. to the specific era of the topic
 -provides profile management with a secure login
+-allows users to save the searches and favorites

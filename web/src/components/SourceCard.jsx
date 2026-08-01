@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 export default function SourceCard({ item, isArchive }) {
   const themeColor = isArchive ? '#e60000' : '#0070f3';
@@ -14,12 +14,13 @@ export default function SourceCard({ item, isArchive }) {
     e.stopPropagation();
     
     const token = localStorage.getItem('auth_token');
+    const isUserLoggedIn = !!token;
     if (!token) return;
 
     try {
-      const response = await fetch(`http://127.0.0{token}`, {
+      const response = await fetch(`http://127.0.0.1:8000/favorites`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           title: cardTitle,
           url: item?.url || 'https://archive.org',

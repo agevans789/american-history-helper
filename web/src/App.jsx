@@ -185,7 +185,7 @@ export default function App() {
       </main>
 
       <aside style={{ borderLeft: '1px solid #eee', paddingLeft: '20px', minWidth: '260px' }}>
-        <h2 style={{ fontSize: '18px', margin: '0 0 16px 0', color: '#333' }}>🧭 Related Topics</h2>
+        <h2 style={{ fontSize: '18px', margin: '0 0 16px 0', color: '#333' }}>Related Topics</h2>
         {recommendations.length === 0 && (
           <p style={{ color: '#999', fontSize: '13px', fontStyle: 'italic' }}>
             No related connections active. Connect and seed your local database to map discovery paths.
@@ -198,6 +198,31 @@ export default function App() {
             onClick={() => handleSearch(topic.title)} 
           />
         ))}
+         {currentUser && (
+          <div style={{ marginTop: '30px', borderTop: '1px solid #eee', paddingTop: '20px' }}>
+            <h3 style={{ fontSize: '15px', color: '#333', marginBottom: '10px' }}>Saved Searches</h3>
+            {savedSearches.length === 0 && <p style={{ fontSize: '12px', color: '#999', fontStyle: 'italic' }}>No saved search paths yet.</p>}
+            <ul style={{ paddingLeft: '18px', margin: 0, fontSize: '13px', color: '#0070f3' }}>
+              {savedSearches.map((s, idx) => (
+                <li key={idx} onClick={() => handleSearch(s.query_text)} style={{ cursor: 'pointer', marginBottom: '4px', textDecoration: 'underline' }}>
+                  {s.query_text}
+                </li>
+              ))}
+            </ul>
+
+            <h3 style={{ fontSize: '15px', color: '#333', marginTop: '24px', marginBottom: '10px' }}>Saved Bookmarked Volumes</h3>
+            {favorites.length === 0 && <p style={{ fontSize: '12px', color: '#999', fontStyle: 'italic' }}>No saved bookmarks yet.</p>}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {favorites.map((f, idx) => (
+                <div key={idx} style={{ background: '#f9f9f9', padding: '8px', borderRadius: '4px', border: '1px solid #eee' }}>
+                  <a href={f.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '12px', color: '#e60000', fontWeight: 'bold', textDecoration: 'none' }}>
+                    {f.title}
+                  </a>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </aside>
 
       <AuthModal 
