@@ -8,13 +8,14 @@ export default function SourceCard({ item, isArchive }) {
   const cardTitle = item?.title || "Untitled Historical Document Artifact";
 
   const [isStarred, setIsStarred] = useState(false);
+ 
+  const token = localStorage.getItem('auth_token');
+  const isUserLoggedIn = !!token;
 
   const handleFavoriteClick = async (e) => {
     e.preventDefault(); 
     e.stopPropagation();
-    
-    const token = localStorage.getItem('auth_token');
-    const isUserLoggedIn = !!token;
+  
     if (!token) return;
 
     try {
