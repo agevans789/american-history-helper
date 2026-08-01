@@ -9,24 +9,20 @@ export default function App() {
   const [recommendations, setRecommendations] = useState([]);
   const [archiveSources, setArchiveSources] = useState([]); 
   const [loading, setLoading] = useState(false);
-  
   const [historyStack, setHistoryStack] = useState([]);
   const [currentQuery, setCurrentQuery] = useState('');
 
   const handleSearch = async (queryPhrase, isGoingBack = false) => {
     if (!queryPhrase || queryPhrase.trim() === '') return;
     setLoading(true);
-    
     try {
       const cleanTerm = queryPhrase.trim();
       const targetUrl = 'http://' + '127.0.0.1' + ':' + '8000' + '/api/discover?q=' + encodeURIComponent(cleanTerm);
       const response = await fetch(targetUrl);
       const data = await response.json();
-      
       setSources(data.matching_sources || []);
       setRecommendations(data.recommended_topics || []);
       setArchiveSources(data.archive_primary_sources || []); 
-      
       if (!isGoingBack && currentQuery) {
         setHistoryStack((prev) => [...prev, currentQuery]);
       }
@@ -71,24 +67,37 @@ export default function App() {
         
         {loading && <p style={{ color: '#666', fontStyle: 'italic', margin: '20px 0' }}>Searching the historical database archives...</p>}
  
-        {!loading && archiveSources.length > 0 && (
-          <section style={{ marginTop: '20px' }}>
-            <h2 style={{ fontSize: '18px', borderBottom: '2px solid #e60000', paddingBottom: '4px', marginBottom: '14px', color: '#e60000' }}>📚 Real-Time Historical Reference Sources (Top 10)</h2>
-            {archiveSources.map((doc, idx) => (
-              <a 
-                href={doc.url || ('https://archive.org' + encodeURIComponent(doc.title || "history"))} 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                key={idx}
-                style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
-              >
-                <SourceCard item={doc} isArchive={true} />
-              </a>
+        {!loading && sources.length > 0 && (
+          <section style={{ marginBottom: '30px' }}>
+            <h2 style={{ fontSize: '18px', borderBottom: '2px solid #0070f3', paddingBottom: '4px', marginBottom: '14px', color: '#0070f3' }}>Local History Entries</h2>
+            {sources.map((item) => (
+              <SourceCard key={item.entry_id} item={item} isArchive={false} />
             ))}
           </section>
         )}
 
+        {!loading && archiveSources.length > 0 && (
+          <section style={{ marginTop: '20px' }}>
+            <h2 style={{ fontSize: '18px', borderBottom: '2px solid #e60000', paddingBottom: '4px', marginBottom: '14px', color: '#e60000' }}>📚 Real-Time Historical Reference Sources (Top 10)</h2>
+            {archiveSources.map((doc, idx) => {
+              const safeUrl = doc?.url && String(doc.url).includes('http') 
+                ? String(doc.url).trim() 
+                : 'https://archive.org' + encodeURIComponent(doc?.title || currentQuery || "history");
 
+              return (
+                <a 
+                  href={safeUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  key={idx}
+                  style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
+                >
+                  <SourceCard item={doc} isArchive={true} />
+                </a>
+              );
+            })}
+          </section>
+        )}
 
 
         {!loading && sources.length === 0 && archiveSources.length === 0 && (
@@ -100,13 +109,11 @@ export default function App() {
 
       <aside style={{ borderLeft: '1px solid #eee', paddingLeft: '20px', minWidth: '260px' }}>
         <h2 style={{ fontSize: '18px', margin: '0 0 16px 0', color: '#333' }}>🧭 Related Topics</h2>
-        
         {recommendations.length === 0 && (
           <p style={{ color: '#999', fontSize: '13px', fontStyle: 'italic' }}>
             No related connections active. Connect and seed your local database to map discovery paths.
           </p>
         )}
-        
         {recommendations.map((topic) => (
           <RelatedCard 
             key={topic.entry_id} 
@@ -118,6 +125,7 @@ export default function App() {
     </MainLayout>
   );
 }
+
 
 
 

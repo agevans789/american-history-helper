@@ -1,4 +1,5 @@
 import httpx
+from urllib.parse import quote_plus
 from fastapi import APIRouter, Query
 from typing import Optional, List
 from pydantic import BaseModel
@@ -79,37 +80,38 @@ async def discover_history(
     clean_query = q.strip()
     title_case_query = clean_query.title()
     base_era = detect_historical_era(clean_query)
-    
     archive_primary_sources = []
-    encoded_search = clean_query.replace(" ", "+")
-    
-    archive_api_url = f"https://archive.org{encoded_search}+AND+mediatype:texts&fl[]=identifier,title,date,description&rows=10&output=json"
-    backup_search_url = f"https://archive.org{encoded_search}"
-    
+    encoded_search = quote_plus(clean_query)
+    archive_api_url = "https://archive.org/advancedsearch.php"
+    backup_search_url = f"https://archive.org/search.php?query={encoded_search}"
+    query_params = {
+    "q": f"{clean_query} AND mediatype:texts",
+    "fl[]": ["identifier", "title", "date", "description"],
+    "rows": 10,
+    "output": "json"
+    }
     try:
-        async with httpx.AsyncClient(timeout=6.0, verify=False) as client:
-            response = await client.get(archive_api_url)
+        async with httpx.AsyncClient(timeout=6.0) as client:
+            response = await client.get(archive_api_url, params=query_params)
             if response.status_code == 200:
                 data = response.json()
                 docs = data.get("response", {}).get("docs", [])
-                
                 for idx, item in enumerate(docs, start=1):
-                    formatted_title = f"Internet Archive Record: {title_case_query} Chronicle Record {idx}"
-                    
+                    formatted_title = item.get(
+                        "title",
+                        f"Internet Archive Record {idx}"
+                )
                     raw_date = item.get("date", "")
                     display_date = "Archival Print"
                     if len(raw_date) >= 10:
                         display_date = raw_date[:10]
-                    
                     raw_desc = item.get("description", "")
                     clean_desc = str(raw_desc)[:220] + "..." if raw_desc else "Authentic library text sheet capturing primary source documentation records."
-                    
                     target_path = item.get("identifier", "")
                     if target_path:
-                        true_url = f"https://archive.org{target_path}"
+                        true_url = f"https://archive.org/details/{target_path}"
                     else:
                         true_url = backup_search_url
-                    
                     archive_primary_sources.append(
                         ArchiveDocumentDTO(
                             title=formatted_title,
@@ -120,7 +122,6 @@ async def discover_history(
                     )
     except Exception:
         pass
-
     if not archive_primary_sources:
         for idx in range(1, 11):
             archive_primary_sources.append(
@@ -131,7 +132,6 @@ async def discover_history(
                     description=f"Authentic library text sheet capturing primary source documentation records related to '{title_case_query}'."
                 )
             )
-
     matching_sources = [
         SearchResultDTO(
             entry_id=1001,
@@ -141,15 +141,14 @@ async def discover_history(
             rank=1.0
         )
     ]
-
     recommended_topics = calculate_decade_themes(clean_query, base_era)
-
     return ExpandedDiscoveryResponse(
         query=title_case_query,
         matching_sources=matching_sources,
         recommended_topics=recommended_topics,
         archive_primary_sources=archive_primary_sources
     )
+
 
 
 

@@ -3,13 +3,6 @@ import React from 'react';
 export default function SourceCard({ item, isArchive }) {
   const themeColor = isArchive ? '#e60000' : '#0070f3';
   const badgeText = isArchive ? 'Internet Archive Digital Resource' : item?.historical_era || 'Local Database Node';
-  
-
-  const cleanTitle = item && item.title ? String(item.title) : 'history';
-  const fallbackUrl = 'https://archive.org' + encodeURIComponent(cleanTitle);
-  
-  const rawUrl = item && item.url ? String(item.url).trim() : '';
-  const itemUrl = isArchive ? (rawUrl || fallbackUrl) : '#';
 
   const cardDescription = item?.description || item?.content || "No summary text provided for this archival record entry.";
   const cardTitle = item?.title || "Untitled Historical Document Artifact";
@@ -24,19 +17,8 @@ export default function SourceCard({ item, isArchive }) {
       boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
       textAlign: 'left'
     }}>
-      <h3 style={{ margin: '0 0 6px 0' }}>
-        {isArchive ? (
-          <a 
-            href={itemUrl} 
-            target="_blank" 
-            rel="noopener noreferrer" 
-            style={{ color: themeColor, textDecoration: 'none', display: 'inline-block' }}
-          >
-            {cardTitle}
-          </a>
-        ) : (
-          <span style={{ color: themeColor }}>{cardTitle}</span>
-        )}
+      <h3 style={{ margin: '0 0 6px 0', color: themeColor }}>
+        {cardTitle}
       </h3>
       
       <div style={{ marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -62,18 +44,15 @@ export default function SourceCard({ item, isArchive }) {
       </p>
 
       {isArchive && (
-        <a 
-          href={itemUrl} 
-          target="_blank" 
-          rel="noopener noreferrer" 
-          style={{ fontSize: '12px', color: '#0070f3', fontWeight: 'bold', textDecoration: 'none', display: 'inline-block' }}
-        >
+        <span style={{ fontSize: '12px', color: '#0070f3', fontWeight: 'bold' }}>
           View Original Document Artifact →
-        </a>
+        </span>
       )}
     </article>
   );
 }
+
+
 
 
 
