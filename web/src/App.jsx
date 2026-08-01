@@ -9,8 +9,6 @@ export default function App() {
   const [recommendations, setRecommendations] = useState([]);
   const [locSources, setLocSources] = useState([]); 
   const [loading, setLoading] = useState(false);
-  
-  // Navigation stack state parameters to handle going back to previous eras smoothly
   const [historyStack, setHistoryStack] = useState([]);
   const [currentQuery, setCurrentQuery] = useState('');
 
@@ -19,14 +17,15 @@ export default function App() {
     setLoading(true);
     
     try {
-      const response = await fetch(`http://127.0.0{encodeURIComponent(queryPhrase)}`);
+      const targetUrl = 'http://127.0.0' + encodeURIComponent(queryPhrase);
+      
+      const response = await fetch(targetUrl);
       const data = await response.json();
       
       setSources(data.matching_sources || []);
       setRecommendations(data.recommended_topics || []);
       setLocSources(data.loc_primary_sources || []); 
-      
-      // Update history tracking allocations if the user is traveling deeper into the graph
+ 
       if (!isGoingBack && currentQuery) {
         setHistoryStack((prev) => [...prev, currentQuery]);
       }
@@ -118,3 +117,4 @@ export default function App() {
     </MainLayout>
   );
 }
+
