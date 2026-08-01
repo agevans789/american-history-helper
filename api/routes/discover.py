@@ -77,12 +77,16 @@ async def discover_history(
             for row in discovery_result:
                 recommended_topics.append(
                     RecommendationDTO(
-                        entry_id=row.entry_id, title=row.title, historical_era=row.historical_era,
-                        relationship_type=row.relationship_type, weight=float(row.weight)
+                        entry_id=row.entry_id, 
+                        title=row.title, 
+                        historical_era=row.historical_era,
+                        relationship_type=row.relationship_type, 
+                        weight=float(row.weight)
                     )
                 )
         except Exception as graph_err:
             print(f"Graph recommendations bypassed: {graph_err}")
+
 
     loc_primary_sources = []
     loc_url = "https://www.loc.gov/search/"
