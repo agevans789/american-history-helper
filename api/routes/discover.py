@@ -35,10 +35,12 @@ def detect_historical_era(text_corpus: str) -> str:
     corpus = text_corpus.lower()
     if any(w in corpus for w in ["nixon", "watergate", "vietnam", "197"]):
         return "Late 20th Century History"
-    if any(w in corpus for w in ["1929", "depression", "hoover", "roosevelt"]):
+    if any(w in corpus for w in ["1929", "depression", "hoover", "roosevelt", "193"]):
         return "The Great Depression Era"
-    if any(w in corpus for w in ["twain", "gilded", "rockefeller"]):
+    if any(w in corpus for w in ["twain", "gilded", "rockefeller", "188", "189"]):
         return "Gilded Age & Progressive Era"
+    if any(w in corpus for w in ["wright", "airplane", "aviation", "190", "191"]):
+        return "Progressive Era Aviation"
     return "American History Archive Chronology"
 
 def calculate_decade_themes(query: str, era_name: str) -> List[RecommendationDTO]:
@@ -47,18 +49,28 @@ def calculate_decade_themes(query: str, era_name: str) -> List[RecommendationDTO
         return [
             RecommendationDTO(entry_id=3001, title="1970s Counterculture & Disco Style", historical_era=era_name, relationship_type="Style of the Era", weight=0.95),
             RecommendationDTO(entry_id=3002, title="Microprocessors & Early Home Computers", historical_era=era_name, relationship_type="Technology of the Time", weight=0.91),
-            RecommendationDTO(entry_id=3003, title="New Journalism & Postmodern American Literature", historical_era=era_name, relationship_type="Literature of the Era", weight=0.88)
+            RecommendationDTO(entry_id=3003, title="New Journalism & Postmodern American Literature", historical_era=era_name, relationship_type="Literature of the Era", weight=0.88),
+            RecommendationDTO(entry_id=3004, title="Funk, Funk Rock, Soul, & Progressive Rock", historical_era=era_name, relationship_type="Music of the Era", weight=0.85)
         ]
     if "depression" in text or "193" in text:
         return [
-            RecommendationDTO(entry_id=3004, title="Art Deco Design & WPA Murals", historical_era=era_name, relationship_type="Style of the Era", weight=0.95),
-            RecommendationDTO(entry_id=3005, title="Commercial Radio Networks & Sound Cinema", historical_era=era_name, relationship_type="Technology of the Time", weight=0.91),
-            RecommendationDTO(entry_id=3006, title="The Grapes of Wrath & Social Realism Literature", historical_era=era_name, relationship_type="Literature of the Era", weight=0.88)
+            RecommendationDTO(entry_id=3005, title="Art Deco Design & WPA Murals", historical_era=era_name, relationship_type="Style of the Era", weight=0.95),
+            RecommendationDTO(entry_id=3006, title="Commercial Radio Networks & Sound Cinema", historical_era=era_name, relationship_type="Technology of the Time", weight=0.91),
+            RecommendationDTO(entry_id=3007, title="The Grapes of Wrath & Social Realism Literature", historical_era=era_name, relationship_type="Literature of the Era", weight=0.88),
+            RecommendationDTO(entry_id=3008, title="Big Band Swing, Delta Blues, & Urban Folk Music", historical_era=era_name, relationship_type="Music of the Era", weight=0.85)
+        ]
+    if "twain" in text or "gilded" in text or "188" in text or "189" in text:
+        return [
+            RecommendationDTO(entry_id=3009, title="Victorian Architecture & Gilded Opulence Style", historical_era=era_name, relationship_type="Style of the Era", weight=0.95),
+            RecommendationDTO(entry_id=3010, title="Incandescent Lighting & Electric Power Grids", historical_era=era_name, relationship_type="Technology of the Time", weight=0.91),
+            RecommendationDTO(entry_id=3011, title="Literary Realism & Regional American Dialects", historical_era=era_name, relationship_type="Literature of the Era", weight=0.88),
+            RecommendationDTO(entry_id=3012, title="Classical Orchestras, Early Marching Bands, & Parlor Music", historical_era: era_name, relationship_type="Music of the Era", weight=0.85)
         ]
     return [
         RecommendationDTO(entry_id=3099, title=f"{query.title()} Material Culture & Style", historical_era=era_name, relationship_type="Style of the Era", weight=0.92),
         RecommendationDTO(entry_id=3100, title=f"{query.title()} Scientific & Industrial Tools", historical_era=era_name, relationship_type="Technology of the Time", weight=0.89),
-        RecommendationDTO(entry_id=3101, title=f"{query.title()} Print Culture, Journals & Poetry", historical_era=era_name, relationship_type="Literature of the Era", weight=0.86)
+        RecommendationDTO(entry_id=3101, title=f"{query.title()} Print Culture, Journals & Poetry", historical_era=era_name, relationship_type="Literature of the Era", weight=0.86),
+        RecommendationDTO(entry_id=3102, title=f"{query.title()} Contemporary Sonic & Folk Traditions", historical_era=era_name, relationship_type="Music of the Era", weight=0.83)
     ]
 
 @router.get("/discover", response_model=ExpandedDiscoveryResponse)
@@ -82,7 +94,7 @@ async def discover_history(
                 items = data.get("items", [])
                 
                 for idx, item in enumerate(items[:10], start=1):
-                    formatted_title = f"Chronicling America Record: {title_case_query} Chronicle Issue {idx}"
+                    formatted_title = f"Chronicling America Record: {title_case_query} Chronicle Record {idx}"
                     
                     raw_date = item.get("date", "")
                     display_date = "Archival Print"
@@ -92,10 +104,11 @@ async def discover_history(
                     ocr_text = item.get("ocr_eng", "")
                     clean_desc = ocr_text[:220] + "..." if ocr_text else "Authentic library text sheet capturing primary source documentation records."
                     
-                    true_url = item.get("url", "")
-                    if true_url and not true_url.startswith("http"):
-                        true_url = f"https://loc.gov{true_url}"
-                    if not true_url:
+                    # Real-time data target fix: Chronicling America item payload stores the deep links under the 'id' field, requiring an exact root schema.
+                    page_id = item.get("id", "").strip()
+                    if page_id:
+                        true_url = f"https://loc.gov{page_id}"
+                    else:
                         true_url = f"https://loc.gov{encoded_search}"
                     
                     loc_primary_sources.append(
@@ -113,7 +126,7 @@ async def discover_history(
         for idx in range(1, 11):
             loc_primary_sources.append(
                 LocDocumentDTO(
-                    title=f"Chronicling America Record: {title_case_query} Chronicle Issue {idx}",
+                    title=f"Chronicling America Record: {title_case_query} Chronicle Record {idx}",
                     url=f"https://loc.gov{encoded_search}",
                     item_date="Archival Print",
                     description=f"Authentic library text sheet capturing primary source documentation records related to '{title_case_query}'."

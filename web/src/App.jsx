@@ -21,7 +21,6 @@ export default function App() {
       const cleanTerm = queryPhrase.trim();
       const targetUrl = 'http://' + '127.0.0.1' + ':' + '8000' + '/api/discover?q=' + encodeURIComponent(cleanTerm);
       const response = await fetch(targetUrl);
-
       const data = await response.json();
       
       setSources(data.matching_sources || []);
@@ -98,11 +97,11 @@ export default function App() {
       </main>
 
       <aside style={{ borderLeft: '1px solid #eee', paddingLeft: '20px', minWidth: '260px' }}>
-        <h2 style={{ fontSize: '18px', margin: '0 0 16px 0', color: '#333' }}>🧭 Related Topics Graph</h2>
+        <h2 style={{ fontSize: '18px', margin: '0 0 16px 0', color: '#333' }}>🧭 Related Topics</h2>
         
         {recommendations.length === 0 && (
           <p style={{ color: '#999', fontSize: '13px', fontStyle: 'italic' }}>
-            No graph connections active. Connect and seed your local database to map discovery paths.
+            No related connections active. Connect and seed your local database to map discovery paths.
           </p>
         )}
         
@@ -117,6 +116,7 @@ export default function App() {
     </MainLayout>
   );
 }
+
 
 
 
