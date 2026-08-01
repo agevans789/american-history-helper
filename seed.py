@@ -60,7 +60,19 @@ async def seed_graph_database():
         await session.execute(relationships_sql)
         
         await session.commit()
-        print("🎉 Success! 5 historical nodes and discovery graph paths have been fully seeded into SQLite.")
+        print("Historical nodes and discovery graph paths have been added.")
+
+        print("Timetamping tables...")
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS users (
+                user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE NOT NULL,
+                email TEXT UNIQUE NOT NULL,
+                hashed_password TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """))
+
 
 if __name__ == "__main__":
     asyncio.run(seed_graph_database())
