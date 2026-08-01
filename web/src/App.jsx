@@ -18,6 +18,9 @@ export default function App() {
   const [historyStack, setHistoryStack] = useState([]);
   const [currentQuery, setCurrentQuery] = useState('');
 
+  const [savedSearches, setSavedSearches] = useState([]);
+  const [favorites, setFavorites] = useState([]);
+
 
   useEffect(() => {
     const savedUser = localStorage.getItem('user_profile');
@@ -25,6 +28,31 @@ export default function App() {
       setCurrentUser(JSON.parse(savedUser));
     }
   }, []);
+
+  useEffect(() => {
+    if (!currentUser) {
+      setSavedSearches([]);
+      setFavorites([]);
+      return;
+    }
+    fetchUserData();
+  }, [currentUser]);
+
+  const fetchUserData = async () => {
+    const token = localStorage.getItem('auth_token');
+    if (!token) return;
+    try {
+      const searchRes = await fetch(`http://127.0.0{token}`);
+      const searches = await searchRes.json();
+      setSavedSearches(searches || []);
+
+      const favRes = await fetch(`http://127.0.0{token}`);
+      const favs = await favRes.json();
+      setFavorites(favs || []);
+    } catch (err) {
+      console.error("Error pulling history lists:", err);
+    }
+  };
 
   const handleSignOut = () => {
     localStorage.removeItem('auth_token');

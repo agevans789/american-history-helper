@@ -30,6 +30,29 @@ async def seed_graph_database():
                 FOREIGN KEY (target_entry_id) REFERENCES historical_entries(entry_id) ON DELETE CASCADE
             );
         """))
+
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS saved_searches (
+                search_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                query_text TEXT NOT NULL,
+                saved_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+            );
+        """))
+
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS favorite_sources (
+                favorite_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                title TEXT NOT NULL,
+                url TEXT NOT NULL,
+                description TEXT,
+                favorited_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+            );
+        """))
+
         
     async with async_session() as session:
         print("Safely purging legacy data packets across relational trees...")
@@ -62,7 +85,7 @@ async def seed_graph_database():
         await session.commit()
         print("Historical nodes and discovery graph paths have been added.")
 
-        print("Timetamping tables...")
+        print("Timestamping tables...")
         await conn.execute(text("""
             CREATE TABLE IF NOT EXISTS users (
                 user_id INTEGER PRIMARY KEY AUTOINCREMENT,
