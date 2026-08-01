@@ -71,23 +71,24 @@ export default function App() {
         
         {loading && <p style={{ color: '#666', fontStyle: 'italic', margin: '20px 0' }}>Searching the historical database archives...</p>}
  
-        {!loading && sources.length > 0 && (
-          <section style={{ marginBottom: '30px' }}>
-            <h2 style={{ fontSize: '18px', borderBottom: '2px solid #0070f3', paddingBottom: '4px', marginBottom: '14px', color: '#0070f3' }}>Local History Entries</h2>
-            {sources.map((item) => (
-              <SourceCard key={item.entry_id} item={item} isLoc={false} />
-            ))}
-          </section>
-        )}
-
         {!loading && archiveSources.length > 0 && (
           <section style={{ marginTop: '20px' }}>
             <h2 style={{ fontSize: '18px', borderBottom: '2px solid #e60000', paddingBottom: '4px', marginBottom: '14px', color: '#e60000' }}>📚 Real-Time Historical Reference Sources (Top 10)</h2>
             {archiveSources.map((doc, idx) => (
-              <SourceCard key={idx} item={doc} isArchive={true} />
+              <a 
+                href={doc.url || ('https://archive.org' + encodeURIComponent(doc.title || "history"))} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                key={idx}
+                style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
+              >
+                <SourceCard item={doc} isArchive={true} />
+              </a>
             ))}
           </section>
         )}
+
+
 
 
         {!loading && sources.length === 0 && archiveSources.length === 0 && (

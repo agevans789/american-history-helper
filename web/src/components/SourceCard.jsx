@@ -4,11 +4,10 @@ export default function SourceCard({ item, isArchive }) {
   const themeColor = isArchive ? '#e60000' : '#0070f3';
   const badgeText = isArchive ? 'Internet Archive Digital Resource' : item?.historical_era || 'Local Database Node';
   
-  // Explicit absolute query string removes character splits
+
   const cleanTitle = item && item.title ? String(item.title) : 'history';
   const fallbackUrl = 'https://archive.org' + encodeURIComponent(cleanTitle);
   
-  // Strict cleanup checks avoid empty objects from breaking the click loops
   const rawUrl = item && item.url ? String(item.url).trim() : '';
   const itemUrl = isArchive ? (rawUrl || fallbackUrl) : '#';
 
