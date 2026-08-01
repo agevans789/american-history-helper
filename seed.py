@@ -1,39 +1,50 @@
 import asyncio
 from sqlalchemy import text
-from api.database import async_session, Base, engine
-
-try:
-    from api.routes import discover  
-except ImportError:
-    pass
+from api.database import async_session, engine
 
 async def seed_graph_database():
-    print("Initializing local SQLite history discovery database...")
+    print("Initializing local SQLite history discovery database using raw schemas...")
     
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+        print("Stamping raw table structures...")
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS historical_entries (
+                entry_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                content TEXT NOT NULL,
+                historical_era TEXT NOT NULL
+            );
+        """))
+  
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS relationships (
+                relationship_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                source_entry_id INTEGER NOT NULL,
+                target_entry_id INTEGER NOT NULL,
+                weight REAL NOT NULL,
+                relationship_type TEXT NOT NULL,
+                FOREIGN KEY (source_entry_id) REFERENCES historical_entries(entry_id),
+                FOREIGN KEY (target_entry_id) REFERENCES historical_entries(entry_id)
+            );
+        """))
         
     async with async_session() as session:
-        print("Clearing stale table rows safely...")
-        try:
-            await session.execute(text("DELETE FROM relationships;"))
-            await session.execute(text("DELETE FROM historical_entries;"))
-            await session.commit()
-        except Exception as e:
-            print(f"Skipping clean clear checks (tables were already empty): {e}")
- 
-        print("Injecting primary historical nodes dynamically (No hardcoded primary keys)...")
+        print("Clearing out legacy data packets...")
+        await session.execute(text("DELETE FROM relationships;"))
+        await session.execute(text("DELETE FROM historical_entries;"))
+        
+        print("Injecting primary historical nodes...")
         entries_sql = text("""
-            INSERT INTO historical_entries (title, content, historical_era) VALUES
-            ('George Washington', 'First President of the United States and Commander of the Continental Army during the American Revolutionary War.', 'Revolutionary War Era'),
-            ('The Stamp Act of 1765', 'A direct tax imposed by British Parliament on printed materials in the American colonies, sparking early unified colonial resistance.', 'Revolutionary War Era'),
-            ('The Boston Tea Party', 'A political protest by the Sons of Liberty in Boston where colonists frustrated at British taxation without representation dumped tea into the harbor.', 'Revolutionary War Era'),
-            ('The Declaration of Independence', 'The formal statement adopted by Second Continental Congress declaring thirteen colonies free from Great Britain.', 'Revolutionary War Era'),
-            ('The Battles of Lexington and Concord', 'The opening military engagements of the Revolutionary War, marking the outbreak of armed structural conflict.', 'Revolutionary War Era');
+            INSERT INTO historical_entries (entry_id, title, content, historical_era) VALUES
+            (1, 'George Washington', 'First President of the United States and Commander of the Continental Army during the American Revolutionary War.', 'Revolutionary War Era'),
+            (2, 'The Stamp Act of 1765', 'A direct tax imposed by British Parliament on printed materials in the American colonies, sparking early unified colonial resistance.', 'Revolutionary War Era'),
+            (3, 'The Boston Tea Party', 'A political protest by the Sons of Liberty in Boston where colonists frustrated at British taxation without representation dumped tea into the harbor.', 'Revolutionary War Era'),
+            (4, 'The Declaration of Independence', 'The formal statement adopted by the Second Continental Congress declaring the thirteen colonies free from Great Britain.', 'Revolutionary War Era'),
+            (5, 'The Battles of Lexington and Concord', 'The opening military engagements of the Revolutionary War, marking the outbreak of armed structural conflict.', 'Revolutionary War Era');
         """)
         await session.execute(entries_sql)
         
-        print("Building structural discovery graph connections...")
+        print("Building structural graph connections...")
         relationships_sql = text("""
             INSERT INTO relationships (source_entry_id, target_entry_id, weight, relationship_type) VALUES
             (2, 3, 0.90, 'Causation'),     -- Stamp Act caused the Boston Tea Party

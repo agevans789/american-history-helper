@@ -35,13 +35,10 @@ async def discover_history(
         except Exception:
             pass 
 
-        # 2. Local Database Search Layer (Broadened to support individual keyword arrays)
     matching_sources, source_ids = [], []
     try:
-        # We split your search phrase by spaces to catch partial word items (like 'Stamp' and 'Act')
         keywords = q.strip().split()
         
-        # Build conditions dynamically to check both title and content fields for every keyword fragment
         conditions = []
         query_params = {}
         for idx, word in enumerate(keywords):
