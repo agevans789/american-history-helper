@@ -35,16 +35,30 @@ async def discover_history(
         except Exception:
             pass 
 
+        # 2. Local Database Search Layer (Broadened to support individual keyword arrays)
     matching_sources, source_ids = [], []
     try:
-        search_sql = text("""
+        # We split your search phrase by spaces to catch partial word items (like 'Stamp' and 'Act')
+        keywords = q.strip().split()
+        
+        # Build conditions dynamically to check both title and content fields for every keyword fragment
+        conditions = []
+        query_params = {}
+        for idx, word in enumerate(keywords):
+            param_key = f"word_{idx}"
+            conditions.append(f"(title LIKE :{param_key} OR content LIKE :{param_key})")
+            query_params[param_key] = f"%{word}%"
+            
+        search_condition_string = " AND ".join(conditions) if conditions else "1=1"
+        
+        search_sql = text(f"""
             SELECT entry_id, title, content, historical_era 
             FROM historical_entries
-            WHERE title LIKE :like_query OR content LIKE :like_query
+            WHERE {search_condition_string}
             LIMIT 5;
         """)
         
-        search_result = await db.execute(search_sql, {"like_query": f"%{q}%"})
+        search_result = await db.execute(search_sql, query_params)
         for row in search_result:
             matching_sources.append(
                 SearchResultDTO(
@@ -57,7 +71,8 @@ async def discover_history(
             )
             source_ids.append(row.entry_id)
     except Exception as db_err:
-        print(f"Local SQLite extraction skipped (seeding required): {db_err}")
+        print(f"Local SQLite extraction skipped: {db_err}")
+
 
     recommended_topics = []
     if source_ids:
