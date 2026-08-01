@@ -6,6 +6,7 @@ from pydantic import BaseModel
 
 router = APIRouter(prefix="/api", tags=["Discovery"])
 
+
 class SearchResultDTO(BaseModel):
     entry_id: int
     title: str
@@ -48,6 +49,7 @@ def detect_historical_era(text_corpus: str) -> str:
         return "Late 20th Century History"
     return "American History Archive Chronology"
 
+
 @router.get("/discover", response_model=ExpandedDiscoveryResponse)
 async def discover_history(
     q: str = Query(..., description="The historical search phrase"),
@@ -69,7 +71,7 @@ async def discover_history(
     search_params = {
         "action": "query",
         "list": "search",
-        "srsearch": clean_query + " history",
+        "srsearch": clean_query + " history primary source documents",
         "srlimit": "10",
         "format": "json"
     }
@@ -81,21 +83,22 @@ async def discover_history(
                 search_data = search_response.json()
                 search_results = search_data.get("query", {}).get("search", [])
                 
-                for idx, item in enumerate(search_results):
+                for item in search_results:
                     item_title = item.get("title", "Untitled Historical Record")
                     snippet = item.get("snippet", "No summary details available.")
-                    
+                   
                     clean_snippet = re.sub(r'<[^>]*>', '', snippet)
-                
+                    
+        
                     encoded_title = item_title.replace(" ", "_")
                     direct_url = f"https://wikipedia.org{encoded_title}"
                     
                     loc_primary_sources.append(
                         LocDocumentDTO(
-                            title=item_title,
-                            url=direct_url,
+                            title=item_title, 
+                            url=direct_url,   
                             item_date="Archival Record",
-                            description=clean_snippet + "..." if clean_snippet else "Historical entry detailing records."
+                            description=clean_snippet + "..." if clean_snippet else "Historical record database profile detailing history tracking metrics."
                         )
                     )
     except Exception as e:
@@ -113,7 +116,6 @@ async def discover_history(
                 )
             )
 
-    wiki_url = "https://wikipedia.org"
     wiki_params = {
         "action": "query", 
         "prop": "links", 
@@ -126,7 +128,7 @@ async def discover_history(
     
     try:
         async with httpx.AsyncClient(headers=headers, timeout=5.0, verify=False) as client:
-            wiki_response = await client.get(wiki_url, params=wiki_params)
+            wiki_response = await client.get(search_url, params=wiki_params)
             if wiki_response.status_code == 200:
                 wiki_data = wiki_response.json()
                 pages_layer = wiki_data.get("query", {}).get("pages", {})
@@ -189,7 +191,6 @@ async def discover_history(
                 )
             )
 
- 
     matching_sources = [
         SearchResultDTO(
             entry_id=1001,
@@ -202,6 +203,7 @@ async def discover_history(
 
     return ExpandedDiscoveryResponse(
         query=title_case_query,
+
         matching_sources=matching_sources,
         recommended_topics=recommended_topics,
         loc_primary_sources=loc_primary_sources
