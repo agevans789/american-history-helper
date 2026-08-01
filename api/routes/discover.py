@@ -53,70 +53,72 @@ async def discover_history(
 ):
     clean_query = q.strip()
     loc_primary_sources = []
-    
+
     loc_url = "https://loc.gov"
     params = {"q": clean_query, "fo": "json"}
+
     headers = {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
         "Accept": "application/json"
     }
     
     try:
-        async with httpx.AsyncClient(headers=headers, timeout=6.0, verify=False) as client:
+        async with httpx.AsyncClient(headers=headers, timeout=8.0, verify=False) as client:
             loc_response = await client.get(loc_url, params=params)
             if loc_response.status_code == 200:
                 loc_data = loc_response.json()
-                
-                for item in loc_data.get("results", [])[:10]:
+    
+                for item in loc_data.get("results", []):
                     raw_title = item.get("title")
-                    if isinstance(raw_title, list):
-                        title_text = " ".join(map(str, raw_title)) if raw_title else ""
+                    if isinstance(raw_title, list) and len(raw_title) > 0:
+                        title_text = " ".join(map(str, raw_title))
                     else:
                         title_text = str(raw_title) if raw_title else ""
-                        
-                 
+                    
                     title_text = title_text.strip()
                     if not title_text or "untitled" in title_text.lower():
                         continue
 
                 
-                    id_raw = item.get("id") or item.get("url") or ""
-                    url_text = str(id_raw).strip()
+                    url_raw = item.get("url") or item.get("id") or ""
+                    url_text = str(url_raw).strip()
                     
                     if url_text.startswith("//"):
-                        url_text = f"https:{url_text}"
+                        url_text = "https:" + url_text
                     elif url_text.startswith("/"):
-                        url_text = f"https://loc.gov{url_text}"
+                        url_text = "https://loc.gov" + url_text
                     elif not url_text.startswith("http"):
-                        # If it is a generic record chunk identifier, pass it straight to the target search ledger matrix
-                        url_text = f"https://loc.gov/item/{url_text}/" if url_text.isdigit() else f"https://loc.gov?q={clean_query}"
+                        continue
 
                     raw_date = item.get("date", "Unknown Date")
-                    date_text = str(raw_date) if not isinstance(raw_date, list) else str(raw_date[0] if raw_date else "Unknown Date")
+                    date_text = str(raw_date) if isinstance(raw_date, list) and len(raw_date) > 0 else str(raw_date)
                     
                     raw_desc = item.get("description", ["No archival summary available."])
                     desc_text = " ".join(map(str, raw_desc)) if isinstance(raw_desc, list) else str(raw_desc)
-                    if not desc_text.strip():
-                        desc_text = f"Archival historical artifact records item documenting details regarding {clean_query}."
+                    if not desc_text.strip() or desc_text == "None":
+                        desc_text = f"Archival historical artifact item record detailing data elements regarding {clean_query}."
 
                     loc_primary_sources.append(
                         LocDocumentDTO(
-                            title=title_text,
-                            url=url_text,
-                            item_date=date_text if date_text else "Unknown Date",
+                            title=title_text, 
+                            url=url_text,     
+                            item_date=date_text if date_text and date_text != "None" else "Unknown Date",
                             description=desc_text[:230] + "..." if len(desc_text) > 230 else desc_text
                         )
                     )
+                    if len(loc_primary_sources) >= 10:
+                        break
     except Exception as e:
-        print(f"LOC Dynamic Stream network exception caught: {e}")
+        print(f"Live network trace failure: {e}")
 
     if not loc_primary_sources:
         for idx in range(1, 11):
+            encoded_search = clean_query.replace(" ", "+")
             loc_primary_sources.append(
                 LocDocumentDTO(
-                    title=f"Archival Historical Ledger Entry #{idx} for {clean_query.title()}",
-                    url=f"https://loc.gov?q={clean_query}",
-                    item_date="Historical Archive",
+                    title=f"Live Archive Record #{idx} for {clean_query.title()}",
+                    url=f"https://loc.gov?q={encoded_search}",
+                    item_date="Network Offline Fallback",
                     description=f"Primary resource compilation files detailing events, historical actions, and records connected with '{clean_query}'."
                 )
             )
@@ -146,7 +148,7 @@ async def discover_history(
             if (phrase_clean.lower() not in clean_query.lower() and 
                 phrase_clean not in seen_subjects and 
                 len(phrase_clean) > 4 and 
-                phrase_clean not in ["Library", "Congress", "United", "States", "Archive", "Untitled", "Collection", "Description", "Federal", "American", "History"]):
+                phrase_clean not in ["Library", "Congress", "United", "States", "Archive", "Untitled", "Collection", "Description", "Federal", "American", "History", "Record"]):
                 
                 seen_subjects.add(phrase_clean)
                 node_id = 2000 + len(recommended_topics)
@@ -181,7 +183,5 @@ async def discover_history(
         recommended_topics=recommended_topics,
         loc_primary_sources=loc_primary_sources
     )
-
-
 
 
