@@ -67,9 +67,15 @@ export default function App() {
           </p>
         )}
         
+        
         {recommendations.map((topic) => (
-          <RelatedCard key={topic.entry_id} topic={topic} onClick={handleSearch} />
+          <RelatedCard 
+            key={topic.entry_id} 
+            topic={topic} 
+            onClick={() => handleSearch(topic.title)}
+          />
         ))}
+
       </aside>
     </MainLayout>
   );
