@@ -1,16 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import MainLayout from './layouts/MainLayout';
 import SearchBar from './components/SearchBar';
 import SourceCard from './components/SourceCard';
 import RelatedCard from './components/RelatedCard';
+import AuthModal from './components/AuthModal';
 
 export default function App() {
+
+  const [currentUser, setCurrentUser] = useState(null);
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
+
+
   const [sources, setSources] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
   const [archiveSources, setArchiveSources] = useState([]); 
   const [loading, setLoading] = useState(false);
   const [historyStack, setHistoryStack] = useState([]);
   const [currentQuery, setCurrentQuery] = useState('');
+
+
+  useEffect(() => {
+    const savedUser = localStorage.getItem('user_profile');
+    if (savedUser) {
+      setCurrentUser(JSON.parse(savedUser));
+    }
+  }, []);
+
+  const handleSignOut = () => {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('user_profile');
+    setCurrentUser(null);
+  };
 
   const handleSearch = async (queryPhrase, isGoingBack = false) => {
     if (!queryPhrase || queryPhrase.trim() === '') return;
@@ -44,6 +64,36 @@ export default function App() {
   return (
     <MainLayout>
       <main style={{ padding: '20px', position: 'relative' }}>
+ 
+        <div style={{ 
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
+          background: '#fcfcfc', padding: '12px 16px', borderRadius: '6px', 
+          border: '1px solid #eaeaea', marginBottom: '20px' 
+        }}>
+          <div>
+            {currentUser ? (
+              <span style={{ fontSize: '14px', color: '#333' }}>
+                Signed in as: <strong>{currentUser.username}</strong> ({currentUser.email})
+              </span>
+            ) : (
+              <span style={{ fontSize: '14px', color: '#666', fontStyle: 'italic' }}>
+                Viewing as Guest Node. Sign in to capture favorites maps.
+              </span>
+            )}
+          </div>
+          <div>
+            {currentUser ? (
+              <button onClick={handleSignOut} style={{ background: '#333', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' }}>
+                Sign Out
+              </button>
+            ) : (
+              <button onClick={() => setIsAuthOpen(true)} style={{ background: '#0070f3', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}>
+                Account Sign In
+              </button>
+            )}
+          </div>
+        </div>
+
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px' }}>
           {historyStack.length > 0 && (
             <button 
@@ -66,7 +116,7 @@ export default function App() {
         <SearchBar onSearch={handleSearch} />
         
         {loading && <p style={{ color: '#666', fontStyle: 'italic', margin: '20px 0' }}>Searching the historical database archives...</p>}
- 
+
         {!loading && sources.length > 0 && (
           <section style={{ marginBottom: '30px' }}>
             <h2 style={{ fontSize: '18px', borderBottom: '2px solid #0070f3', paddingBottom: '4px', marginBottom: '14px', color: '#0070f3' }}>Local History Entries</h2>
@@ -99,7 +149,6 @@ export default function App() {
           </section>
         )}
 
-
         {!loading && sources.length === 0 && archiveSources.length === 0 && (
           <p style={{ color: '#666', background: '#f5f5f5', padding: '30px', borderRadius: '6px', textAlign: 'center', marginTop: '20px' }}>
             Type a historical event above to explore the discovery networks map.
@@ -122,9 +171,16 @@ export default function App() {
           />
         ))}
       </aside>
+
+      <AuthModal 
+        isOpen={isAuthOpen} 
+        onClose={() => setIsAuthOpen(false)} 
+        onAuthSuccess={(user) => setCurrentUser(user)} 
+      />
     </MainLayout>
   );
 }
+
 
 
 
