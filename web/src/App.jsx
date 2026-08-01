@@ -9,11 +9,13 @@ export default function App() {
   const [recommendations, setRecommendations] = useState([]);
   const [locSources, setLocSources] = useState([]); 
   const [loading, setLoading] = useState(false);
+  
+  // Navigation stack state parameters to handle going back to previous eras smoothly
   const [historyStack, setHistoryStack] = useState([]);
   const [currentQuery, setCurrentQuery] = useState('');
 
-  const handleSearch = async (queryPhrase, isGoingBack = False) => {
-    if (!queryPhrase || queryPhrase.strip === '') return;
+  const handleSearch = async (queryPhrase, isGoingBack = false) => {
+    if (!queryPhrase || queryPhrase.trim() === '') return;
     setLoading(true);
     
     try {
@@ -24,6 +26,7 @@ export default function App() {
       setRecommendations(data.recommended_topics || []);
       setLocSources(data.loc_primary_sources || []); 
       
+      // Update history tracking allocations if the user is traveling deeper into the graph
       if (!isGoingBack && currentQuery) {
         setHistoryStack((prev) => [...prev, currentQuery]);
       }
@@ -39,13 +42,14 @@ export default function App() {
     if (historyStack.length === 0) return;
     const previousQuery = historyStack[historyStack.length - 1];
     setHistoryStack((prev) => prev.slice(0, -1));
-    handleSearch(previousQuery, True);
+    handleSearch(previousQuery, true);
   };
 
   return (
     <MainLayout>
       <main style={{ padding: '20px', position: 'relative' }}>
-      
+        
+        {/* Navigation Toolbar */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px' }}>
           {historyStack.length > 0 && (
             <button 
@@ -107,12 +111,10 @@ export default function App() {
           <RelatedCard 
             key={topic.entry_id} 
             topic={topic} 
-            onClick={() => handleSearch(topic.title)}
+            onClick={() => handleSearch(topic.title)} 
           />
         ))}
       </aside>
     </MainLayout>
   );
 }
-
-
